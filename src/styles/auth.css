@@ -1,0 +1,86 @@
+.auth-page {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: calc(100vh - var(--nav-height) - 200px);
+  padding: var(--space-12) 0;
+}
+.auth-container {
+  max-width: 420px;
+  margin: 0 auto;
+  width: 100%;
+}
+.auth-header { text-align: center; margin-bottom: var(--space-8); }
+.auth-header h1 { margin-bottom: var(--space-2); }
+.auth-card { width: 100%; }
+
+.auth-google-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  padding: 12px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary);
+  transition: all var(--duration-normal);
+}
+.auth-google-btn:hover { background: var(--bg-hover); border-color: var(--border-strong); }
+
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  margin: var(--space-5) 0;
+  color: var(--text-tertiary);
+  font-size: 13px;
+}
+.auth-divider::before, .auth-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+.auth-form { display: flex; flex-direction: column; gap: var(--space-4); }
+.auth-error {
+  font-size: 13px;
+  color: var(--color-danger);
+  padding: var(--space-3) var(--space-4);
+  background: rgba(231,76,60,0.08);
+  border-radius: var(--radius-sm);
+}
+
+.auth-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  margin-top: var(--space-5);
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--border);
+}
+.auth-toggle-btn {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--green-light);
+}
+.auth-toggle-btn:hover { text-decoration: underline; }
+
+.auth-guest-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  width: 100%;
+  margin-top: var(--space-4);
+  padding: var(--space-3);
+  font-size: 14px;
+  color: var(--text-secondary);
+  transition: color var(--duration-fast);
+}
+.auth-guest-btn:hover { color: var(--text-primary); }

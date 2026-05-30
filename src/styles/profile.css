@@ -1,0 +1,79 @@
+.profile-page { padding: var(--space-8) 0 var(--space-16); }
+
+.profile-empty {
+  text-align: center;
+  padding: var(--space-20) 0;
+}
+.profile-empty h2 { margin-bottom: var(--space-2); }
+.profile-empty p { margin-bottom: var(--space-6); }
+
+.profile-header-card { margin-bottom: var(--space-6); }
+.profile-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-5);
+  flex-wrap: wrap;
+}
+.profile-header-info { flex: 1; }
+.profile-name {
+  font-family: var(--font-display);
+  font-size: 28px;
+  font-weight: 700;
+}
+.profile-rank-row { display: flex; gap: var(--space-2); margin-top: var(--space-2); }
+.profile-header-score { text-align: right; }
+.profile-total-score {
+  font-family: var(--font-display);
+  font-size: 36px;
+  font-weight: 700;
+  color: var(--gold-primary);
+}
+
+.profile-rank-progress { margin-top: var(--space-6); }
+.profile-rank-labels { display: flex; justify-content: space-between; margin-bottom: var(--space-2); }
+.profile-progress-bar {
+  height: 6px;
+  background: var(--bg-surface);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+  margin-bottom: var(--space-2);
+}
+.profile-progress-fill {
+  height: 100%;
+  border-radius: var(--radius-full);
+  transition: width 0.5s var(--ease-out);
+}
+
+.profile-stats { margin-bottom: var(--space-8); }
+
+.profile-section { margin-bottom: var(--space-8); }
+.profile-section h2 { margin-bottom: var(--space-1); }
+
+.achievements-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: var(--space-3);
+}
+.achievement-card {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+.achievement-locked { opacity: 0.4; }
+.achievement-unlocked { border-color: var(--gold-primary); background: var(--gold-surface); }
+.achievement-icon { font-size: 28px; flex-shrink: 0; }
+.achievement-info { flex: 1; }
+.achievement-name { font-size: 14px; font-weight: 600; display: block; }
+.achievement-desc { font-size: 12px; color: var(--text-secondary); }
+.achievement-check { color: var(--gold-primary); font-weight: 700; }
+
+.profile-cta { text-align: center; margin-top: var(--space-8); }
+
+@media (max-width: 640px) {
+  .profile-header { flex-direction: column; text-align: center; }
+  .profile-header-score { text-align: center; width: 100%; }
+}
