@@ -1,139 +1,139 @@
-import { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { supabase } from '../config/supabase';
+import { createContext, useContext, useState, useEffect } from 'react';
+import { auth, googleProvider, db } from '../config/firebase';
+import { signInWithPopup, signInWithEmailAndPassword, createUserWithEmailAndPassword, signInAnonymously, signOut, onAuthStateChanged } from 'firebase/auth';
+import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
+import { sanitizeInput } from '../lib/security';
 
-const AuthContext = createContext(null);
+const AuthContext = createContext();
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchProfile = useCallback(async (userId) => {
+  // Helper to fetch or create profile in Firestore
+  const fetchOrCreateProfile = async (firebaseUser, additionalData = {}) => {
+    if (!firebaseUser) {
+      setProfile(null);
+      return;
+    }
+    
     try {
-      const { data } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .single();
+      const docRef = doc(db, 'profiles', firebaseUser.uid);
+      const docSnap = await getDoc(docRef);
       
-      if (data) {
-        setProfile(data);
+      if (docSnap.exists()) {
+        setProfile(docSnap.data());
       } else {
-        // Create profile on first sign-in
-        const { data: newProfile } = await supabase
-          .from('profiles')
-          .insert({
-            id: userId,
-            username: `player_${userId.slice(0, 8)}`,
-            display_name: 'New Player',
-            total_score: 0,
-            rank: 'rookie',
-          })
-          .select()
-          .single();
+        // Create new profile
+        const rawUsername = additionalData.username || firebaseUser.displayName?.replace(/\s+/g, '').toLowerCase() || firebaseUser.email?.split('@')[0] || `guest_${firebaseUser.uid.substring(0, 5)}`;
+        const newProfile = {
+          id: firebaseUser.uid,
+          username: sanitizeInput(rawUsername, 20),
+          display_name: sanitizeInput(firebaseUser.displayName || 'Player', 50),
+          avatar_url: firebaseUser.photoURL || null,
+          role: 'player',
+          rank: 'Rookie',
+          total_score: 0,
+          created_at: new Date()
+        };
+        await setDoc(docRef, newProfile);
         setProfile(newProfile);
       }
     } catch (err) {
-      console.error('Profile fetch error:', err);
-      // Fallback profile for demo/guest mode
-      setProfile({
-        id: userId,
-        username: `player_${userId.slice(0, 8)}`,
-        display_name: 'Guest Player',
-        total_score: 0,
-        rank: 'rookie',
-        avatar_url: null,
-      });
+      console.error('Error fetching/creating profile:', err);
     }
-  }, []);
+  };
 
   useEffect(() => {
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      const currentUser = session?.user ?? null;
+    // Listen to Firebase Auth state changes
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
-      if (currentUser) fetchProfile(currentUser.id);
+      if (currentUser) {
+        await fetchOrCreateProfile(currentUser);
+      } else {
+        setProfile(null);
+      }
       setLoading(false);
     });
 
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      const currentUser = session?.user ?? null;
-      setUser(currentUser);
-      if (currentUser) fetchProfile(currentUser.id);
-      else setProfile(null);
-      setLoading(false);
-    });
-
-    return () => subscription.unsubscribe();
-  }, [fetchProfile]);
+    return () => unsubscribe();
+  }, []);
 
   const signInWithGoogle = async () => {
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: { redirectTo: window.location.origin },
-    });
-    if (error) throw error;
+    try {
+      await signInWithPopup(auth, googleProvider);
+    } catch (error) {
+      console.error('Google Sign In Error:', error.message);
+      throw error;
+    }
   };
 
   const signInWithEmail = async (email, password) => {
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) throw error;
-    return data;
+    const { user } = await signInWithEmailAndPassword(auth, email, password);
+    return user;
   };
 
   const signUpWithEmail = async (email, password, username) => {
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: { data: { username } },
-    });
-    if (error) throw error;
-    return data;
+    const { user } = await createUserWithEmailAndPassword(auth, email, password);
+    await fetchOrCreateProfile(user, { username });
+    return user;
   };
 
   const signInAsGuest = async () => {
-    // Guest mode — create a local-only session
-    const guestId = `guest_${Date.now()}_${Math.random().toString(36).slice(2)}`;
-    const guestUser = { id: guestId, email: null, isGuest: true };
-    setUser(guestUser);
-    setProfile({
-      id: guestId,
-      username: `guest_${guestId.slice(6, 14)}`,
-      display_name: 'Guest',
-      total_score: 0,
-      rank: 'rookie',
-      avatar_url: null,
-    });
+    const { user } = await signInAnonymously(auth);
+    return user;
   };
 
-  const signOut = async () => {
-    await supabase.auth.signOut();
-    setUser(null);
-    setProfile(null);
+  const logOut = async () => {
+    await signOut(auth);
+  };
+
+  const updateProfile = async (updates) => {
+    if (!user) throw new Error('Not authenticated');
+    const docRef = doc(db, 'profiles', user.uid);
+
+    // Sanitize editable fields
+    const sanitizedUpdates = {};
+    if (updates.display_name !== undefined) {
+      sanitizedUpdates.display_name = sanitizeInput(updates.display_name, 50);
+    }
+    if (updates.username !== undefined) {
+      sanitizedUpdates.username = sanitizeInput(updates.username, 20);
+    }
+
+    // Prevent role escalation from client
+    delete sanitizedUpdates.role;
+    delete sanitizedUpdates.id;
+
+    sanitizedUpdates.updated_at = new Date();
+
+    await updateDoc(docRef, sanitizedUpdates);
+    setProfile(prev => ({ ...prev, ...sanitizedUpdates }));
+    return sanitizedUpdates;
+  };
+
+  const value = {
+    user,
+    profile,
+    loading,
+    isAuthenticated: !!user,
+    isGuest: user?.isAnonymous || false,
+    signInWithGoogle,
+    signInWithEmail,
+    signUpWithEmail,
+    signInAsGuest,
+    logOut,
+    updateProfile,
   };
 
   return (
-    <AuthContext.Provider value={{
-      user,
-      profile,
-      loading,
-      isAuthenticated: !!user,
-      isGuest: user?.isGuest || false,
-      signInWithGoogle,
-      signInWithEmail,
-      signUpWithEmail,
-      signInAsGuest,
-      signOut,
-      setProfile,
-    }}>
-      {children}
+    <AuthContext.Provider value={value}>
+      {!loading && children}
     </AuthContext.Provider>
   );
 }
 
 export function useAuth() {
-  const context = useContext(AuthContext);
-  if (!context) throw new Error('useAuth must be used within AuthProvider');
-  return context;
+  return useContext(AuthContext);
 }

@@ -1,11 +1,22 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import {
+  validateEmail,
+  validatePassword,
+  validateUsername,
+  sanitizeFirebaseError,
+  checkRateLimit,
+  recordRateLimitAttempt,
+  clearRateLimit,
+} from '../lib/security';
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
 import Card from '../components/ui/Card';
 import { Mail, Lock, User, ArrowRight } from 'lucide-react';
 import '../styles/auth.css';
+
+const RATE_LIMIT_KEY = 'auth_login';
 
 export default function Auth() {
   const [isLogin, setIsLogin] = useState(true);
@@ -13,13 +24,50 @@ export default function Auth() {
   const [password, setPassword] = useState('');
   const [username, setUsername] = useState('');
   const [error, setError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState({});
   const [loading, setLoading] = useState(false);
+  const [rateLimited, setRateLimited] = useState(false);
   const { signInWithGoogle, signInWithEmail, signUpWithEmail, signInAsGuest } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // Redirect back to where the user came from (if routed via ProtectedRoute), otherwise homepage
+  const redirectTo = location.state?.from || '/';
+
+  const validateForm = () => {
+    const errors = {};
+
+    const emailResult = validateEmail(email);
+    if (!emailResult.valid) errors.email = emailResult.error;
+
+    const passwordResult = validatePassword(password);
+    if (!passwordResult.valid) errors.password = passwordResult.error;
+
+    if (!isLogin) {
+      const usernameResult = validateUsername(username);
+      if (!usernameResult.valid) errors.username = usernameResult.error;
+    }
+
+    setFieldErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+
+    // Client-side validation
+    if (!validateForm()) return;
+
+    // Rate limit check
+    const rateCheck = checkRateLimit(RATE_LIMIT_KEY);
+    if (!rateCheck.allowed) {
+      const minutes = Math.ceil(rateCheck.retryAfterMs / 60000);
+      setRateLimited(true);
+      setError(`Too many attempts. Please try again in ${minutes} minute${minutes === 1 ? '' : 's'}.`);
+      return;
+    }
+
     setLoading(true);
     try {
       if (isLogin) {
@@ -27,23 +75,42 @@ export default function Auth() {
       } else {
         await signUpWithEmail(email, password, username);
       }
-      navigate('/play');
+      clearRateLimit(RATE_LIMIT_KEY);
+      navigate(redirectTo);
     } catch (err) {
-      setError(err.message || 'Authentication failed');
+      recordRateLimitAttempt(RATE_LIMIT_KEY);
+      setError(sanitizeFirebaseError(err));
+
+      // Check if now rate limited
+      const postCheck = checkRateLimit(RATE_LIMIT_KEY);
+      if (!postCheck.allowed) setRateLimited(true);
     } finally {
       setLoading(false);
     }
   };
 
   const handleGoogle = async () => {
-    try { await signInWithGoogle(); }
-    catch (err) { setError(err.message); }
+    try {
+      await signInWithGoogle();
+      navigate(redirectTo);
+    } catch (err) {
+      setError(sanitizeFirebaseError(err));
+    }
   };
 
   const handleGuest = async () => {
-    await signInAsGuest();
-    navigate('/play');
+    try {
+      await signInAsGuest();
+      navigate(redirectTo);
+    } catch (err) {
+      setError(sanitizeFirebaseError(err));
+    }
   };
+
+  // Password strength indicator for sign-up
+  const passwordStrength = !isLogin && password.length > 0
+    ? validatePassword(password).strength
+    : null;
 
   return (
     <div className="auth-page">
@@ -68,14 +135,17 @@ export default function Auth() {
               <span>or</span>
             </div>
 
-            <form onSubmit={handleSubmit} className="auth-form">
+            <form onSubmit={handleSubmit} className="auth-form" noValidate>
               {!isLogin && (
                 <Input
                   label="Username"
                   placeholder="Choose a username"
                   icon={<User size={18} />}
                   value={username}
-                  onChange={(e) => setUsername(e.target.value)}
+                  onChange={(e) => { setUsername(e.target.value); setFieldErrors(prev => ({ ...prev, username: undefined })); }}
+                  error={fieldErrors.username}
+                  maxLength={20}
+                  autoComplete="username"
                   required
                 />
               )}
@@ -85,7 +155,10 @@ export default function Auth() {
                 placeholder="you@example.com"
                 icon={<Mail size={18} />}
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => { setEmail(e.target.value); setFieldErrors(prev => ({ ...prev, email: undefined })); }}
+                error={fieldErrors.email}
+                maxLength={254}
+                autoComplete="email"
                 required
               />
               <Input
@@ -94,15 +167,34 @@ export default function Auth() {
                 placeholder="••••••••"
                 icon={<Lock size={18} />}
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(e) => { setPassword(e.target.value); setFieldErrors(prev => ({ ...prev, password: undefined })); }}
+                error={fieldErrors.password}
+                maxLength={128}
+                autoComplete={isLogin ? 'current-password' : 'new-password'}
                 required
               />
 
+              {/* Password strength indicator */}
+              {passwordStrength && (
+                <div className="auth-password-strength">
+                  <div className={`auth-strength-bar auth-strength-${passwordStrength}`} />
+                  <span className="body-sm text-secondary">
+                    Password strength: {passwordStrength}
+                  </span>
+                </div>
+              )}
+
               {error && <div className="auth-error">{error}</div>}
 
-              <Button variant="primary" size="lg" loading={loading} style={{ width: '100%' }}>
-                {isLogin ? 'Sign In' : 'Create Account'}
-                <ArrowRight size={16} />
+              <Button
+                variant="primary"
+                size="lg"
+                loading={loading}
+                disabled={rateLimited}
+                style={{ width: '100%' }}
+              >
+                {rateLimited ? 'Too many attempts' : isLogin ? 'Sign In' : 'Create Account'}
+                {!rateLimited && <ArrowRight size={16} />}
               </Button>
             </form>
 
@@ -110,7 +202,7 @@ export default function Auth() {
               <span className="body-sm text-secondary">
                 {isLogin ? "Don't have an account?" : 'Already have an account?'}
               </span>
-              <button className="auth-toggle-btn" onClick={() => { setIsLogin(!isLogin); setError(''); }}>
+              <button className="auth-toggle-btn" onClick={() => { setIsLogin(!isLogin); setError(''); setFieldErrors({}); }}>
                 {isLogin ? 'Sign Up' : 'Sign In'}
               </button>
             </div>

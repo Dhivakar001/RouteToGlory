@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import Tabs from '../components/ui/Tabs';
 import Card from '../components/ui/Card';
-import Badge from '../components/ui/Badge';
 import TrendIndicator from '../components/shared/TrendIndicator';
 import Avatar from '../components/ui/Avatar';
 import '../styles/leaderboard.css';

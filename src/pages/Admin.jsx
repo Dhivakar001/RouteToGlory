@@ -6,7 +6,7 @@ import Input from '../components/ui/Input';
 import Modal from '../components/ui/Modal';
 import Badge from '../components/ui/Badge';
 import Tabs from '../components/ui/Tabs';
-import { Search, Plus, Edit2, Trash2, Users, BarChart3, Trophy, Settings } from 'lucide-react';
+import { Search, Plus, Edit2, Trash2 } from 'lucide-react';
 import '../styles/admin.css';
 
 const ADMIN_TABS = [

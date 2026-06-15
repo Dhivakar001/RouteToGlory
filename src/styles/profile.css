@@ -10,17 +10,25 @@
 .profile-header-card { margin-bottom: var(--space-6); }
 .profile-header {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: var(--space-5);
   flex-wrap: wrap;
 }
-.profile-header-info { flex: 1; }
+.profile-header-info { flex: 1; min-width: 200px; }
 .profile-name {
   font-family: var(--font-display);
   font-size: 28px;
   font-weight: 700;
 }
 .profile-rank-row { display: flex; gap: var(--space-2); margin-top: var(--space-2); }
+
+/* ─── Header Right (Score + Edit Button) ─── */
+.profile-header-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--space-3);
+}
 .profile-header-score { text-align: right; }
 .profile-total-score {
   font-family: var(--font-display);
@@ -29,6 +37,90 @@
   color: var(--gold-primary);
 }
 
+/* ─── Edit Button ─────────────────────── */
+.profile-edit-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  transition: all var(--duration-normal);
+  cursor: pointer;
+}
+.profile-edit-btn:hover {
+  color: var(--text-primary);
+  border-color: var(--border-strong);
+  background: var(--bg-hover);
+}
+
+/* ─── Edit Form ───────────────────────── */
+.profile-edit-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  max-width: 360px;
+}
+.profile-edit-actions {
+  display: flex;
+  gap: var(--space-2);
+}
+.profile-edit-error {
+  font-size: 13px;
+  color: var(--color-danger);
+  padding: var(--space-2) var(--space-3);
+  background: rgba(231, 76, 60, 0.08);
+  border-radius: var(--radius-sm);
+}
+
+/* ─── Account Info ────────────────────── */
+.profile-account-info {
+  display: flex;
+  gap: var(--space-8);
+  margin-top: var(--space-6);
+  padding-top: var(--space-6);
+  border-top: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+.profile-info-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.profile-info-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-tertiary);
+}
+.profile-info-value {
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+/* ─── Success Toast ───────────────────── */
+.profile-toast {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-5);
+  margin-bottom: var(--space-4);
+  background: var(--green-surface);
+  color: var(--green-light);
+  border: 1px solid rgba(13, 107, 63, 0.25);
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  font-weight: 500;
+  animation: fadeInDown 0.3s ease;
+}
+
+/* ─── Rank Progress ───────────────────── */
 .profile-rank-progress { margin-top: var(--space-6); }
 .profile-rank-labels { display: flex; justify-content: space-between; margin-bottom: var(--space-2); }
 .profile-progress-bar {
@@ -74,6 +166,9 @@
 .profile-cta { text-align: center; margin-top: var(--space-8); }
 
 @media (max-width: 640px) {
-  .profile-header { flex-direction: column; text-align: center; }
-  .profile-header-score { text-align: center; width: 100%; }
+  .profile-header { flex-direction: column; text-align: center; align-items: center; }
+  .profile-header-right { align-items: center; width: 100%; }
+  .profile-header-score { text-align: center; }
+  .profile-edit-form { max-width: 100%; }
+  .profile-account-info { flex-direction: column; gap: var(--space-4); }
 }

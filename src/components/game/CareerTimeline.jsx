@@ -1,7 +1,7 @@
 import { motion } from 'framer-motion';
 import ClubBadge from '../shared/ClubBadge';
 
-export default function CareerTimeline({ career, revealed = false, mode = 'classic' }) {
+export default function CareerTimeline({ career, mode = 'classic' }) {
   if (mode === 'hardcore') {
     // Only show first club
     const first = career[0];

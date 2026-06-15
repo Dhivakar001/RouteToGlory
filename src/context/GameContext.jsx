@@ -1,6 +1,6 @@
-import { createContext, useContext, useReducer, useCallback, useRef, useEffect } from 'react';
+import { createContext, useContext, useReducer, useCallback, useRef, useEffect, useState } from 'react';
 import { calculateScore, checkAchievements } from '../lib/scoring';
-import { PLAYERS_DATA } from '../lib/playerData';
+import { fetchPlayers } from '../config/firebase';
 
 const GameContext = createContext(null);
 
@@ -115,7 +115,23 @@ function gameReducer(state, action) {
 
 export function GameProvider({ children }) {
   const [state, dispatch] = useReducer(gameReducer, initialState);
+  const [allPlayers, setAllPlayers] = useState([]);
+  const [loadingPlayers, setLoadingPlayers] = useState(true);
   const timerRef = useRef(null);
+
+  useEffect(() => {
+    async function loadPlayers() {
+      try {
+        const data = await fetchPlayers({ limitCount: 100 });
+        setAllPlayers(data);
+      } catch (err) {
+        console.error("Failed to load players from Firestore:", err);
+      } finally {
+        setLoadingPlayers(false);
+      }
+    }
+    loadPlayers();
+  }, []);
 
   // Timer for Time Attack mode
   useEffect(() => {
@@ -137,8 +153,9 @@ export function GameProvider({ children }) {
   }, [state.timeRemaining]);
 
   const getRandomPlayer = useCallback(() => {
-    const available = PLAYERS_DATA.filter(p => !state.usedPlayerIds.includes(p.id));
-    const pool = available.length > 0 ? available : PLAYERS_DATA;
+    if (allPlayers.length === 0) return null;
+    const available = allPlayers.filter(p => !state.usedPlayerIds.includes(p.id));
+    const pool = available.length > 0 ? available : allPlayers;
     
     // Reset used players if all have been shown
     if (available.length === 0) {
@@ -146,11 +163,13 @@ export function GameProvider({ children }) {
     }
     
     return pool[Math.floor(Math.random() * pool.length)];
-  }, [state.usedPlayerIds]);
+  }, [state.usedPlayerIds, allPlayers]);
 
   const startGame = useCallback((specificPlayer = null) => {
     const player = specificPlayer || getRandomPlayer();
-    dispatch({ type: 'START_GAME', payload: player });
+    if (player) {
+      dispatch({ type: 'START_GAME', payload: player });
+    }
   }, [getRandomPlayer]);
 
   const setMode = useCallback((mode) => {
@@ -200,7 +219,8 @@ export function GameProvider({ children }) {
       submitGuess,
       nextPlayer,
       clearAchievement,
-      allPlayers: PLAYERS_DATA,
+      allPlayers,
+      loadingPlayers,
     }}>
       {children}
     </GameContext.Provider>

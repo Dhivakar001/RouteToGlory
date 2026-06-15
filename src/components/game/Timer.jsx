@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
 
-export default function Timer({ timeRemaining, isActive }) {
+
+export default function Timer({ timeRemaining }) {
   const percentage = (timeRemaining / 30) * 100;
   const isLow = timeRemaining <= 10;
   const isCritical = timeRemaining <= 5;

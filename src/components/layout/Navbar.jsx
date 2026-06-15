@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { Trophy, User, BarChart3, Shield, Menu, X, Gamepad2 } from 'lucide-react';
+import { User, BarChart3, Shield, Menu, X, Gamepad2 } from 'lucide-react';
 import Button from '../ui/Button';
 
 export default function Navbar() {
-  const { isAuthenticated, profile, signOut } = useAuth();
+  const { isAuthenticated, profile, logOut } = useAuth();
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -47,7 +47,7 @@ export default function Navbar() {
                 <User size={18} />
                 <span>Profile</span>
               </Link>
-              {profile?.rank === 'admin' && (
+              {profile?.role === 'admin' && (
                 <Link
                   to="/admin"
                   className={`navbar-link ${isActive('/admin') ? 'navbar-link-active' : ''}`}
@@ -69,7 +69,7 @@ export default function Navbar() {
                   {profile?.display_name?.[0]?.toUpperCase() || 'P'}
                 </div>
               </Link>
-              <button className="navbar-link body-sm" onClick={signOut}>Sign out</button>
+              <button className="navbar-link body-sm" onClick={logOut}>Sign out</button>
             </div>
           ) : (
             <Link to="/auth">

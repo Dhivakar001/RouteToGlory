@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowRight, Zap, Brain, TrendingUp, Users, Globe, Trophy, Target, ChevronRight } from 'lucide-react';
+import { ArrowRight, Zap, Brain, TrendingUp, Target, ChevronRight } from 'lucide-react';
 import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
 import ClubBadge from '../components/shared/ClubBadge';
@@ -131,10 +131,10 @@ export default function Landing() {
             <div className="daily-card-inner">
               <div className="daily-card-content">
                 <Badge variant="green" size="md">📅 Daily Challenge</Badge>
-                <h2>Today's Mystery Player</h2>
-                <p className="body text-secondary">A new player every day. Can you guess today's challenge before your friends?</p>
+                <h2>Today&apos;s Mystery Player</h2>
+                <p className="body text-secondary">A new player every day. Can you guess today&apos;s challenge before your friends?</p>
                 <Link to="/play?mode=daily">
-                  <Button variant="primary" size="md" icon={<ArrowRight size={16} />}>Play Today's Challenge</Button>
+                  <Button variant="primary" size="md" icon={<ArrowRight size={16} />}>Play Today&apos;s Challenge</Button>
                 </Link>
               </div>
               <div className="daily-card-timer">
@@ -272,7 +272,7 @@ export default function Landing() {
           <div className="grid grid-3">
             {TESTIMONIALS.map((t, i) => (
               <Card key={i} padding="md" className="testimonial-card">
-                <p className="testimonial-text">"{t.text}"</p>
+                <p className="testimonial-text">&quot;{t.text}&quot;</p>
                 <div className="testimonial-author">
                   <strong>{t.author}</strong>
                   <span className="text-secondary body-sm">{t.handle}</span>

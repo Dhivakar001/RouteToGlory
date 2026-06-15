@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { useGame } from '../context/GameContext';
 import Tabs from '../components/ui/Tabs';
 import Button from '../components/ui/Button';
@@ -28,16 +28,16 @@ export default function Game() {
   const [searchParams] = useSearchParams();
   const game = useGame();
   const {
-    mode, status, currentPlayer, guess, hintsRevealed, score, totalScore,
+    mode, status, currentPlayer, hintsRevealed, score, totalScore,
     streak, bestStreak, gamesPlayed, correctGuesses, isCorrect, timeRemaining,
-    newAchievement, GAME_MODES,
+    newAchievement, GAME_MODES, loadingPlayers,
     startGame, setMode, submitGuess, revealHint, nextPlayer, clearAchievement,
   } = game;
 
   useEffect(() => {
     const urlMode = searchParams.get('mode');
     if (urlMode && GAME_MODES[urlMode]) setMode(urlMode);
-  }, [searchParams]);
+  }, [searchParams, GAME_MODES, setMode]);
 
   const handleStartGame = () => startGame();
 
@@ -123,7 +123,7 @@ export default function Game() {
                 <ScoreCounter score={0} totalScore={totalScore} />
                 <StreakTracker streak={streak} bestStreak={bestStreak} />
               </div>
-              <Button variant="gold" size="lg" onClick={handleStartGame}>
+              <Button variant="gold" size="lg" onClick={handleStartGame} disabled={loadingPlayers} loading={loadingPlayers}>
                 {gamesPlayed > 0 ? 'Next Player' : 'Start Game'}
               </Button>
               {gamesPlayed > 0 && (

@@ -1,0 +1,80 @@
+rules_version = '2';
+
+// RouteToGlory Firestore Security Rules
+// Deploy via: firebase deploy --only firestore:rules
+// Or copy-paste into the Firebase Console → Firestore → Rules tab
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ─── Helper Functions ──────────────────
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        get(/databases/$(database)/documents/profiles/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    // ─── Profiles ──────────────────────────
+    // Users can read any profile (for leaderboard display names)
+    // Users can only write their own profile
+    // Cannot self-assign admin role
+    match /profiles/{userId} {
+      allow read: if isAuthenticated();
+      allow create: if isOwner(userId) &&
+        !('role' in request.resource.data && request.resource.data.role == 'admin');
+      allow update: if isOwner(userId) &&
+        !('role' in request.resource.data && request.resource.data.role == 'admin');
+      allow delete: if false; // No self-deletion
+    }
+
+    // ─── Players (Football Players Data) ───
+    // All authenticated users can read
+    // Only admins can create/update/delete
+    match /players/{playerId} {
+      allow read: if isAuthenticated();
+      allow create, update, delete: if isAdmin();
+    }
+
+    // ─── Scores ────────────────────────────
+    // Users can create their own scores
+    // Users can read all scores (for leaderboard)
+    // No updates or deletes (scores are immutable)
+    match /scores/{scoreId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() &&
+        request.resource.data.user_id == request.auth.uid &&
+        request.resource.data.points is number &&
+        request.resource.data.points >= 0 &&
+        request.resource.data.points <= 200; // Max possible score
+      allow update, delete: if false;
+    }
+
+    // ─── Leaderboards ──────────────────────
+    // Read-only for all authenticated users
+    // Only server/admin can write (typically via Cloud Functions)
+    match /leaderboards/{entryId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    // ─── Daily Challenges ──────────────────
+    // Read-only for all authenticated users
+    // Only admins can manage challenges
+    match /daily_challenges/{challengeId} {
+      allow read: if isAuthenticated();
+      allow create, update, delete: if isAdmin();
+    }
+
+    // ─── Deny all other collections ────────
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
