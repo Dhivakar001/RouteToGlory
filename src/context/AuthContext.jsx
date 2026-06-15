@@ -35,6 +35,14 @@ export function AuthProvider({ children }) {
           role: 'player',
           rank: 'Rookie',
           total_score: 0,
+          gameData: {
+            streak: 0,
+            bestStreak: 0,
+            gamesPlayed: 0,
+            correctGuesses: 0,
+            achievements: [],
+            usedPlayerIds: [],
+          },
           created_at: new Date()
         };
         await setDoc(docRef, newProfile);
@@ -113,6 +121,35 @@ export function AuthProvider({ children }) {
     return sanitizedUpdates;
   };
 
+  const updateGameData = async (gameUpdates) => {
+    if (!user || !profile) return;
+    const docRef = doc(db, 'profiles', user.uid);
+
+    const { totalScore, ...restGameData } = gameUpdates;
+    const updatedGameData = { ...(profile.gameData || {}), ...restGameData };
+    
+    const updates = {
+      gameData: updatedGameData,
+      updated_at: new Date()
+    };
+    
+    if (totalScore !== undefined) {
+      updates.total_score = totalScore;
+    }
+
+    setProfile(prev => ({ 
+      ...prev, 
+      gameData: updatedGameData, 
+      ...(totalScore !== undefined && { total_score: totalScore }) 
+    }));
+
+    try {
+      await updateDoc(docRef, updates);
+    } catch (err) {
+      console.error("Failed to sync game data to Firestore:", err);
+    }
+  };
+
   const value = {
     user,
     profile,
@@ -125,6 +162,7 @@ export function AuthProvider({ children }) {
     signInAsGuest,
     logOut,
     updateProfile,
+    updateGameData,
   };
 
   return (

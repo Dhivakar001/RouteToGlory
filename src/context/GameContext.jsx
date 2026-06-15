@@ -1,6 +1,7 @@
 import { createContext, useContext, useReducer, useCallback, useRef, useEffect, useState } from 'react';
 import { calculateScore, checkAchievements } from '../lib/scoring';
 import { fetchPlayers } from '../config/firebase';
+import { useAuth } from './AuthContext';
 
 const GameContext = createContext(null);
 
@@ -108,16 +109,44 @@ function gameReducer(state, action) {
     case 'RESET':
       return { ...initialState, bestStreak: state.bestStreak, totalScore: state.totalScore, achievements: state.achievements };
 
+    case 'HYDRATE_STATE':
+      return {
+        ...state,
+        streak: action.payload.streak ?? state.streak,
+        bestStreak: action.payload.bestStreak ?? state.bestStreak,
+        gamesPlayed: action.payload.gamesPlayed ?? state.gamesPlayed,
+        correctGuesses: action.payload.correctGuesses ?? state.correctGuesses,
+        achievements: action.payload.achievements ?? state.achievements,
+        usedPlayerIds: action.payload.usedPlayerIds ?? state.usedPlayerIds,
+        totalScore: action.payload.totalScore ?? state.totalScore,
+      };
+
     default:
       return state;
   }
 }
 
 export function GameProvider({ children }) {
-  const [state, dispatch] = useReducer(gameReducer, initialState);
+  const [state, dispatch] = useReducer(gameReducer, initialState, () => {
+    const localSave = localStorage.getItem('rtg_guest_save');
+    if (localSave) {
+      try {
+        const parsed = JSON.parse(localSave);
+        return { ...initialState, ...parsed };
+      } catch (e) {
+        return initialState;
+      }
+    }
+    return initialState;
+  });
+  
   const [allPlayers, setAllPlayers] = useState([]);
   const [loadingPlayers, setLoadingPlayers] = useState(true);
   const timerRef = useRef(null);
+  
+  const { profile, updateGameData } = useAuth();
+  const hydratedUserId = useRef(null);
+  const prevGameState = useRef({ gamesPlayed: state.gamesPlayed, usedPlayerIds: state.usedPlayerIds });
 
   useEffect(() => {
     async function loadPlayers() {
@@ -151,6 +180,59 @@ export function GameProvider({ children }) {
       clearInterval(timerRef.current);
     }
   }, [state.timeRemaining]);
+
+  // Hydrate state from profile when user logs in
+  useEffect(() => {
+    if (profile && profile.id !== hydratedUserId.current) {
+      if (profile.gameData) {
+        dispatch({ 
+          type: 'HYDRATE_STATE', 
+          payload: { ...profile.gameData, totalScore: profile.total_score } 
+        });
+      }
+      hydratedUserId.current = profile.id;
+    } else if (!profile && hydratedUserId.current) {
+      // User logged out
+      dispatch({ type: 'RESET' });
+      hydratedUserId.current = null;
+    }
+  }, [profile]);
+
+  // Sync state to Firestore or localStorage when significant changes occur
+  useEffect(() => {
+    if (
+      state.gamesPlayed !== prevGameState.current.gamesPlayed || 
+      state.usedPlayerIds.length !== prevGameState.current.usedPlayerIds.length
+    ) {
+      const syncData = {
+        streak: state.streak,
+        bestStreak: state.bestStreak,
+        gamesPlayed: state.gamesPlayed,
+        correctGuesses: state.correctGuesses,
+        achievements: state.achievements,
+        usedPlayerIds: state.usedPlayerIds,
+        totalScore: state.totalScore
+      };
+
+      if (profile && profile.id === hydratedUserId.current) {
+        updateGameData(syncData);
+      } else if (!profile) {
+        localStorage.setItem('rtg_guest_save', JSON.stringify(syncData));
+      }
+      
+      prevGameState.current = { gamesPlayed: state.gamesPlayed, usedPlayerIds: state.usedPlayerIds };
+    }
+  }, [
+    state.gamesPlayed, 
+    state.usedPlayerIds, 
+    state.streak, 
+    state.bestStreak, 
+    state.correctGuesses, 
+    state.achievements, 
+    state.totalScore, 
+    profile, 
+    updateGameData
+  ]);
 
   const getRandomPlayer = useCallback(() => {
     if (allPlayers.length === 0) return null;
