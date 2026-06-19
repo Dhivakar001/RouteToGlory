@@ -37,6 +37,16 @@ Whether you're a casual fan or a football historian, RouteToGlory offers multipl
 
 ---
 
+## 📸 Screenshots
+
+| ![Home & Auth](public/screenshots/1.png) | ![Game Setup](public/screenshots/2.png) |
+|:---:|:---:|
+| ![Gameplay Clues](public/screenshots/3.png) | ![Gameplay Guessing](public/screenshots/4.png) |
+| ![Success Result](public/screenshots/5.png) | ![Leaderboard Rankings](public/screenshots/6.png) |
+| ![Profile Statistics](public/screenshots/7.png) | |
+
+---
+
 ## 🛠️ Architecture & Tech Stack
 
 - **Frontend Framework:** React 18 powered by Vite for lightning-fast HMR and optimized production builds.
