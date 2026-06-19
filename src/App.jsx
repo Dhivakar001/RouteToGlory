@@ -32,11 +32,7 @@ export default function App() {
                   <Profile />
                 </ProtectedRoute>
               } />
-              <Route path="/leaderboard" element={
-                <ProtectedRoute>
-                  <Leaderboard />
-                </ProtectedRoute>
-              } />
+              <Route path="/leaderboard" element={<Leaderboard />} />
               <Route path="/admin" element={
                 <ProtectedRoute requireAdmin>
                   <Admin />

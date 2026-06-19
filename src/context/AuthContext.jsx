@@ -1,8 +1,10 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
 import { auth, googleProvider, db } from '../config/firebase';
 import { signInWithPopup, signInWithEmailAndPassword, createUserWithEmailAndPassword, signInAnonymously, signOut, onAuthStateChanged } from 'firebase/auth';
 import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import { sanitizeInput } from '../lib/security';
+
+const SESSION_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes of inactivity
 
 const AuthContext = createContext();
 
@@ -10,6 +12,8 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
+  const sessionTimerRef = useRef(null);
+  const lastActivityRef = useRef(Date.now());
 
   // Helper to fetch or create profile in Firestore
   const fetchOrCreateProfile = async (firebaseUser, additionalData = {}) => {
@@ -93,9 +97,34 @@ export function AuthProvider({ children }) {
     return user;
   };
 
-  const logOut = async () => {
+  const logOut = useCallback(async () => {
+    // Clear guest progress on explicit logout
+    localStorage.removeItem('rtg_guest_save');
+    // Clear session activity tracking
+    if (sessionTimerRef.current) clearInterval(sessionTimerRef.current);
     await signOut(auth);
-  };
+  }, []);
+
+  // ─── Session Activity Tracking ───────────
+  useEffect(() => {
+    if (!user) return;
+
+    const resetActivity = () => { lastActivityRef.current = Date.now(); };
+
+    const events = ['mousedown', 'keydown', 'scroll', 'touchstart'];
+    events.forEach(e => window.addEventListener(e, resetActivity, { passive: true }));
+
+    sessionTimerRef.current = setInterval(() => {
+      if (Date.now() - lastActivityRef.current > SESSION_TIMEOUT_MS) {
+        logOut();
+      }
+    }, 60 * 1000); // check every minute
+
+    return () => {
+      events.forEach(e => window.removeEventListener(e, resetActivity));
+      if (sessionTimerRef.current) clearInterval(sessionTimerRef.current);
+    };
+  }, [user, logOut]);
 
   const updateProfile = async (updates) => {
     if (!user) throw new Error('Not authenticated');
@@ -120,20 +149,37 @@ export function AuthProvider({ children }) {
     setProfile(prev => ({ ...prev, ...sanitizedUpdates }));
     return sanitizedUpdates;
   };
+  const lastWriteRef = useRef(0);
+  const WRITE_THROTTLE_MS = 3000; // Max 1 Firestore write per 3 seconds
 
   const updateGameData = async (gameUpdates) => {
     if (!user || !profile) return;
+
+    // Throttle writes to prevent Firestore abuse
+    const now = Date.now();
+    if (now - lastWriteRef.current < WRITE_THROTTLE_MS) return;
+    lastWriteRef.current = now;
+
     const docRef = doc(db, 'profiles', user.uid);
 
     const { totalScore, ...restGameData } = gameUpdates;
     const updatedGameData = { ...(profile.gameData || {}), ...restGameData };
+
+    // Validate numeric fields to prevent corrupted state writes
+    const numericFields = ['streak', 'bestStreak', 'gamesPlayed', 'correctGuesses'];
+    for (const field of numericFields) {
+      if (updatedGameData[field] !== undefined && (typeof updatedGameData[field] !== 'number' || updatedGameData[field] < 0)) {
+        console.warn(`Invalid gameData field "${field}":`, updatedGameData[field]);
+        return;
+      }
+    }
     
     const updates = {
       gameData: updatedGameData,
       updated_at: new Date()
     };
     
-    if (totalScore !== undefined) {
+    if (totalScore !== undefined && typeof totalScore === 'number' && totalScore >= 0) {
       updates.total_score = totalScore;
     }
 

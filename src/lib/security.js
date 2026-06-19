@@ -51,6 +51,16 @@ export function validatePassword(password) {
     return { valid: false, error: 'Password is too long', strength: 'weak' };
   }
 
+  // Block common weak passwords
+  const COMMON_PASSWORDS = [
+    'password', '12345678', 'qwerty12', 'abcdefgh', 'football', 
+    'password1', '11111111', 'letmein12', 'welcome1', 'monkey123',
+    'abc12345', 'admin123', 'iloveyou', 'trustno1', 'sunshine1'
+  ];
+  if (COMMON_PASSWORDS.includes(password.toLowerCase())) {
+    return { valid: false, error: 'This password is too common. Choose something unique.', strength: 'weak' };
+  }
+
   let score = 0;
   if (/[a-z]/.test(password)) score++;
   if (/[A-Z]/.test(password)) score++;
@@ -136,7 +146,7 @@ export function checkRateLimit(key, maxAttempts = 5, windowMs = 15 * 60 * 1000) 
 
   let data;
   try {
-    data = JSON.parse(sessionStorage.getItem(storageKey));
+    data = JSON.parse(localStorage.getItem(storageKey));
   } catch {
     data = null;
   }
@@ -171,7 +181,7 @@ export function recordRateLimitAttempt(key, windowMs = 15 * 60 * 1000) {
 
   let data;
   try {
-    data = JSON.parse(sessionStorage.getItem(storageKey));
+    data = JSON.parse(localStorage.getItem(storageKey));
   } catch {
     data = null;
   }
@@ -182,14 +192,14 @@ export function recordRateLimitAttempt(key, windowMs = 15 * 60 * 1000) {
     data.attempts++;
   }
 
-  sessionStorage.setItem(storageKey, JSON.stringify(data));
+  localStorage.setItem(storageKey, JSON.stringify(data));
 }
 
 /**
  * Clear rate limit (call after successful action).
  */
 export function clearRateLimit(key) {
-  sessionStorage.removeItem(`rl_${key}`);
+  localStorage.removeItem(`rl_${key}`);
 }
 
 /* ─── File Validation ─────────────────────── */
