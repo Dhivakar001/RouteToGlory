@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
   validateEmail,
@@ -27,12 +27,17 @@ export default function Auth() {
   const [fieldErrors, setFieldErrors] = useState({});
   const [loading, setLoading] = useState(false);
   const [rateLimited, setRateLimited] = useState(false);
-  const { signInWithGoogle, signInWithEmail, signUpWithEmail, signInAsGuest } = useAuth();
+  const { signInWithGoogle, signInWithEmail, signUpWithEmail, signInAsGuest, isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
   // Redirect back to where the user came from (if routed via ProtectedRoute), otherwise homepage
   const redirectTo = location.state?.from || '/';
+
+  // If already authenticated, skip the auth page entirely
+  if (isAuthenticated) {
+    return <Navigate to={redirectTo} replace />;
+  }
 
   const validateForm = () => {
     const errors = {};
