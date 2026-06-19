@@ -1,6 +1,7 @@
 import { createContext, useContext, useReducer, useCallback, useRef, useEffect, useState } from 'react';
 import { calculateScore, checkAchievements } from '../lib/scoring';
 import { fetchPlayers } from '../config/firebase';
+import { PLAYERS_DATA } from '../lib/playerData';
 import { useAuth } from './AuthContext';
 
 const GameContext = createContext(null);
@@ -152,9 +153,15 @@ export function GameProvider({ children }) {
     async function loadPlayers() {
       try {
         const data = await fetchPlayers({ limitCount: 100 });
-        setAllPlayers(data);
+        if (data && data.length > 0) {
+          setAllPlayers(data);
+        } else {
+          console.warn("No players found in Firestore. Using fallback offline data.");
+          setAllPlayers(PLAYERS_DATA);
+        }
       } catch (err) {
         console.error("Failed to load players from Firestore:", err);
+        setAllPlayers(PLAYERS_DATA);
       } finally {
         setLoadingPlayers(false);
       }
