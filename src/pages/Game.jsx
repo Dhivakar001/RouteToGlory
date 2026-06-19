@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import { motion } from 'framer-motion';
 import { useGame } from '../context/GameContext';
 import Tabs from '../components/ui/Tabs';
@@ -26,6 +27,8 @@ const MODE_TABS = [
 
 export default function Game() {
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
   const game = useGame();
   const {
     mode, status, currentPlayer, hintsRevealed, score, totalScore,
@@ -40,6 +43,14 @@ export default function Game() {
   }, [searchParams, GAME_MODES, setMode]);
 
   const handleStartGame = () => startGame();
+
+  const handleNextPlayer = () => {
+    if (!isAuthenticated) {
+      navigate('/auth', { state: { from: '/play' } });
+      return;
+    }
+    nextPlayer();
+  };
 
   const handleGuess = (guessName) => {
     submitGuess(guessName);
@@ -123,7 +134,7 @@ export default function Game() {
                 <ScoreCounter score={0} totalScore={totalScore} />
                 <StreakTracker streak={streak} bestStreak={bestStreak} />
               </div>
-              <Button variant="gold" size="lg" onClick={handleStartGame} disabled={loadingPlayers} loading={loadingPlayers}>
+              <Button variant="gold" size="lg" onClick={gamesPlayed > 0 ? handleNextPlayer : handleStartGame} disabled={loadingPlayers} loading={loadingPlayers}>
                 {gamesPlayed > 0 ? 'Next Player' : 'Start Game'}
               </Button>
               {gamesPlayed > 0 && (
@@ -198,7 +209,7 @@ export default function Game() {
                         {hintsRevealed.length === 0 && <Badge variant="gold">Perfect!</Badge>}
                       </div>
                     )}
-                    <Button variant="primary" size="lg" onClick={nextPlayer} style={{ marginTop: 20 }}>
+                    <Button variant="primary" size="lg" onClick={handleNextPlayer} style={{ marginTop: 20 }}>
                       Next Player
                     </Button>
                   </motion.div>

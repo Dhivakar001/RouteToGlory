@@ -21,11 +21,7 @@ export default function App() {
           <Routes>
             <Route element={<Layout />}>
               <Route path="/" element={<Landing />} />
-              <Route path="/play" element={
-                <ProtectedRoute>
-                  <Game />
-                </ProtectedRoute>
-              } />
+              <Route path="/play" element={<Game />} />
               <Route path="/auth" element={<Auth />} />
               <Route path="/profile" element={
                 <ProtectedRoute>
