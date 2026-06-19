@@ -43,7 +43,7 @@ Whether you're a casual fan or a football historian, RouteToGlory offers multipl
 |:---:|:---:|
 | ![Gameplay Clues](public/screenshots/3.png) | ![Gameplay Guessing](public/screenshots/4.png) |
 | ![Success Result](public/screenshots/5.png) | ![Leaderboard Rankings](public/screenshots/6.png) |
-| ![Profile Statistics](public/screenshots/7.png) | |(public/screenshots/8.png)
+| ![Profile Statistics](public/screenshots/7.png) | ![Trophy Mode](public/screenshots/8.png) |
 
 ---
 
